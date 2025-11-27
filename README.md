@@ -1,4 +1,4 @@
-## iso\_peps\_to\_circuit – `to_circuit` subproject
+## iso\_peps\_to\_circuit 
 
 This directory contains the code that converts an iso-PEPS tensor network on a lattice into a quantum circuit, and then simulates / analyzes that circuit in Qiskit.
 
