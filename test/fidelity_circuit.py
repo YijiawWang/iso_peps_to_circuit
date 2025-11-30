@@ -6,6 +6,8 @@ decomposition, when both act on the initial state |000...0>.
 The "before" circuit is defined in nll_unitary.py (using unitary_gates),
 and the "after" circuit is defined in nll_decomposed.py (using
 gates/decomposed_gates gate_matrix.pt).
+
+This uses pure PyTorch (no Qiskit).
 """
 
 import random
@@ -66,5 +68,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

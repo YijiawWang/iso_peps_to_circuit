@@ -4,7 +4,7 @@ Check, for each decomposed gate, that:
 
   1) Rebuilding the circuit from gates listed in
      ../gates/decomposed_gates/gate_index{i}/info.txt
-     reproduces the saved gate_matrix.pt.
+     reproduces the saved gate_matrix.pt (using pure PyTorch, no Qiskit).
 
   2) (Optional) Report the distance between the original unitary_gates
      tensor{i}.pt and the decomposed gate via isometry.
@@ -17,8 +17,6 @@ from typing import List, Tuple
 
 import numpy as np
 import torch
-from qiskit import QuantumCircuit
-from qiskit.quantum_info import Operator
 
 # Make ../src importable (so we can import optimize_unitary_gates)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -26,7 +24,14 @@ SRC_DIR = os.path.join(BASE_DIR, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from optimize_unitary_gates import contributed_index, get_isometry_matrix
+from optimize_unitary_gates import (
+    contributed_index,
+    get_isometry_matrix,
+    u3_matrix,
+    cnot_matrix,
+    apply_single_qubit_gate_to_matrix,
+    apply_two_qubit_gate_to_matrix,
+)
 
 
 def parse_info_file(info_path: str) -> Tuple[int, int, List[str]]:
@@ -68,33 +73,43 @@ _RE_U3 = re.compile(
 _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
 
 
-def build_circuit_from_info(num_qubits: int, op_lines: List[str]) -> QuantumCircuit:
+def build_matrix_from_info(num_qubits: int, op_lines: List[str]) -> torch.Tensor:
     """
-    Rebuild the decomposed circuit described in info.txt.
+    Rebuild the decomposed circuit matrix from info.txt using pure PyTorch.
+    
+    Args:
+        num_qubits: Number of qubits
+        op_lines: List of operation lines from info.txt
+    
+    Returns:
+        Reconstructed gate matrix of shape (2**num_qubits, 2**num_qubits)
     """
-    qc = QuantumCircuit(num_qubits)
-
+    # Start with identity matrix
+    matrix = torch.eye(2 ** num_qubits, dtype=torch.complex128)
+    
     for line in op_lines:
         m_u3 = _RE_U3.match(line)
         if m_u3:
             theta = float(m_u3.group(1))
             phi = float(m_u3.group(2))
             lam = float(m_u3.group(3))
-            q = int(m_u3.group(4))
-            qc.u(theta, phi, lam, q)
+            qubit = int(m_u3.group(4))
+            u3_gate = u3_matrix(theta, phi, lam)
+            matrix = apply_single_qubit_gate_to_matrix(matrix, u3_gate, qubit, num_qubits)
             continue
-
+        
         m_cx = _RE_CNOT.match(line)
         if m_cx:
-            c = int(m_cx.group(1))
-            t = int(m_cx.group(2))
-            qc.cx(c, t)
+            control = int(m_cx.group(1))
+            target = int(m_cx.group(2))
+            cnot_gate = cnot_matrix()
+            matrix = apply_two_qubit_gate_to_matrix(matrix, cnot_gate, control, target, num_qubits)
             continue
-
+        
         # Fallback: ignore unknown lines but print them
         print(f"[WARN] Unrecognized op line: {line}")
-
-    return qc
+    
+    return matrix
 
 
 def frobenius_norm(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -105,7 +120,7 @@ def check_single_gate(idx: int, base_dir: str) -> None:
     """
     For a given tensor index idx:
       - load gate_matrix.pt and info.txt
-      - rebuild circuit from info.txt
+      - rebuild circuit from info.txt using pure PyTorch
       - compare rebuilt matrix to saved gate_matrix.pt
       - also report distance to original unitary_gates tensor{idx}.pt (via isometry)
     """
@@ -124,17 +139,15 @@ def check_single_gate(idx: int, base_dir: str) -> None:
     print(f"  num_qubits={num_qubits}, num_ops(header)={num_ops}, parsed_ops={len(op_lines)}")
 
     # Load saved decomposed matrix
-    dec_matrix = torch.load(gate_mat_path)
+    dec_matrix = torch.load(gate_mat_path, weights_only=False)
     if not dec_matrix.is_complex():
         dec_matrix = dec_matrix.to(torch.complex128)
     else:
         dec_matrix = dec_matrix.to(torch.complex128)
     print(f"  gate_matrix.pt shape: {tuple(dec_matrix.shape)}")
 
-    # Rebuild circuit and get matrix
-    qc = build_circuit_from_info(num_qubits, op_lines)
-    op = Operator(qc)
-    rec_matrix = torch.tensor(op.data, dtype=torch.complex128)
+    # Rebuild circuit and get matrix using pure PyTorch
+    rec_matrix = build_matrix_from_info(num_qubits, op_lines)
     print(f"  rebuilt circuit matrix shape: {tuple(rec_matrix.shape)}")
 
     diff_rec = frobenius_norm(rec_matrix, dec_matrix)
@@ -143,7 +156,7 @@ def check_single_gate(idx: int, base_dir: str) -> None:
     # Optional: compare to original unitary_gates tensor{i}.pt via isometry
     unit_path = os.path.join(base_dir, "gates", "unitary_gates", f"tensor{idx}.pt")
     if os.path.exists(unit_path):
-        unit_tensor = torch.load(unit_path)
+        unit_tensor = torch.load(unit_path, weights_only=False)
         if not unit_tensor.is_complex():
             unit_tensor = unit_tensor.to(torch.complex128)
         else:
@@ -177,5 +190,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

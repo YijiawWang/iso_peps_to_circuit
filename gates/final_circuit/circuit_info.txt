@@ -1,0 +1,6 @@
+Optimized Circuit Information
+======================================================================
+Number of qubits: 9
+Circuit depth: 44
+Total operations: 84
+Operation counts: OrderedDict([('u', 63), ('cx', 21)])

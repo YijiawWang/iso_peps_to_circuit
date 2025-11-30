@@ -54,8 +54,8 @@ def apply_gate(state, gate, qubits):
     gate = gate.to(torch.complex128)
 
     original_shape = state.shape
-    print(gate.shape)
-    print(qubits)
+    # print(gate.shape)  # Commented out for cleaner output
+    # print(qubits)  # Commented out for cleaner output
 
     # Move target qubits to the first dimensions
     state = state.movedim(qubits, list(range(len(qubits))))
@@ -191,7 +191,8 @@ def plot_image_grid(image_list: np.array,
                     rows: int=6,
                     cols: int=5,
                     figsize: tuple=(5, 7),
-                    title: dict = None
+                    title: dict = None,
+                    filename: str = "samples.png"
                     ):
     """
     plot image grid
@@ -240,7 +241,7 @@ def plot_image_grid(image_list: np.array,
         else: 
             fig.delaxes(axes[i])
     plt.tight_layout(rect=[0, 0, 1, 0.96]) # 调整布局以适应主标题
-    plt.savefig(f'samples.png', dpi=300)
+    plt.savefig(filename, dpi=300)
     plt.show()
 
 # Same STANDARD_INDICES as in nll_unitary.py
@@ -280,12 +281,14 @@ if __name__ == "__main__":
     # Optional sampling / plotting:
     samples = sample_from_probability(probs, num_shots=100)
     print(f"Generated {len(samples)} samples from distribution")
+    filename = "../samples/samples_decomposed_approx.png"
     plot_image_grid(
     samples,
     rows = 10,
     cols = 10,
     title='',
-    figsize=(5, 5)
+    figsize=(5, 5),
+    filename=filename
     )
 
 

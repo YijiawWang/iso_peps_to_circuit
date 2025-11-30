@@ -3,10 +3,10 @@ max_iter: 500
 num_layers: 1
 ci: [1]
 final fidelity: 0.999999999999
-final loss (1 - fidelity): 8.533174167269e-13
+final loss (1 - fidelity): 8.140155216552e-13
 final loss_fn (Frobenius): 3.999999999997e+00
 iterations: 7
-optimization time: 0.03 seconds
+optimization time: 0.02 seconds
 num_qubits: 1
 num_params: 3
 num_ops: 1

@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 """
-Compute the circuit depth of the full 9‑qubit NLL circuit built from
-decomposed gates (stored in ../gates/decomposed_gates/gate_index{i}/info.txt),
-and compare with the original unitary‑gate circuit structure.
+Build Qiskit circuit from decomposed gates info.txt files.
+This is a standalone version that doesn't depend on construct_qiskit_circuit.py.
 """
 
 import os
 import re
-import sys
 from typing import List, Tuple
-
 from qiskit import QuantumCircuit
 
-# Make the sibling test directory importable so we can import nll_unitary
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-TEST_DIR = os.path.join(BASE_DIR, "test")
-if TEST_DIR not in sys.path:
-    sys.path.insert(0, TEST_DIR)
-
-import nll_unitary
-
 DECOMP_BASE = os.path.join(BASE_DIR, "gates", "decomposed_gates")
 
+# Qubit pattern for each gate (same as in nll_circuit.py)
+ag = [
+    [4],
+    [2, 5],
+    [1, 2],
+    [4, 7],
+    [4, 5, 7],
+    [0, 1, 4],
+    [7, 8],
+    [6, 7],
+    [3, 4, 6],
+]
+
+# Order of gates (same logical order as nll_circuit.py)
+gate_order = [8, 5, 2, 1, 4, 7, 6, 3, 0]
 
 _RE_U3 = re.compile(
     r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)"
@@ -30,9 +35,7 @@ _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
 
 
 def parse_info_file(info_path: str) -> Tuple[int, int, List[str]]:
-    """
-    Parse num_qubits and op lines from info.txt for a single gate.
-    """
+    """Parse num_qubits and op lines from info.txt for a single gate."""
     num_qubits = None
     num_ops = None
     op_lines: List[str] = []
@@ -63,9 +66,6 @@ def build_global_decomposed_circuit() -> QuantumCircuit:
     using the decomposed gate descriptions in info.txt.
     """
     qc = QuantumCircuit(9)
-
-    ag = nll_unitary.ag
-    gate_order = nll_unitary.gate_order
 
     for gate_idx in gate_order:
         info_path = os.path.join(DECOMP_BASE, f"gate_index{gate_idx}", "info.txt")
@@ -98,31 +98,20 @@ def build_global_decomposed_circuit() -> QuantumCircuit:
                 t_local = int(m_cx.group(2))
                 c_global = local_to_global[c_local]
                 t_global = local_to_global[t_local]
+                # PyTorch's CNOT(control, target) corresponds to Qiskit's cx(control, target)
                 qc.cx(c_global, t_global)
                 continue
 
-            print(f"[WARN] Unrecognized op line for gate_index{gate_idx}: {line}")
+            # Ignore non-operation lines (like "optimization time: ...")
+            if not line.startswith("op"):
+                continue
 
     return qc
 
 
-def main():
-    # Build decomposed 9‑qubit circuit
-    qc_dec = build_global_decomposed_circuit()
-
-    depth_dec = qc_dec.depth()
-    num_ops = qc_dec.size()
-    counts = qc_dec.count_ops()
-
-    print("=" * 70)
-    print("Decomposed NLL circuit (9 qubits)")
-    print("=" * 70)
-    print("Depth         :", depth_dec)
-    print("Total ops     :", num_ops)
-    print("Op counts     :", counts)
-
-
 if __name__ == "__main__":
-    main()
-
+    qc = build_global_decomposed_circuit()
+    print(f"Circuit depth: {qc.depth()}")
+    print(f"Total operations: {qc.size()}")
+    print(f"Operation counts: {qc.count_ops()}")
 
