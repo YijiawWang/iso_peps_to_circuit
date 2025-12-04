@@ -204,6 +204,8 @@ def plot_image_grid(image_list: np.array,
         for i in range(9):
             sample_to_plot.append(sample[QUBITS_MAPPING[i]])
         samples_to_plot.append(np.array(sample_to_plot).reshape(3, 3))
+    # print(samples_to_plot.shape)
+    samples_to_plot = np.transpose(samples_to_plot, axes=(0, 2, 1))
     assert len(samples_to_plot) > 0, "Received empty image list."
     if title is None:
         title = {}
