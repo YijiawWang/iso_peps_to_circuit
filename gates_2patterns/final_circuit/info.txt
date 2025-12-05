@@ -1,0 +1,84 @@
+num_qubits: 9
+num_ops: 81
+
+op0: u3(theta=0.000001, phi=2.253572, lam=1.457661, qubit=3)
+op1: u3(theta=1.637685, phi=-0.578242, lam=-2.161450, qubit=4)
+op2: u3(theta=1.570793, phi=-3.141589, lam=-0.080363, qubit=6)
+op3: cnot[3,4]
+op4: u3(theta=0.000012, phi=1.408997, lam=2.795007, qubit=3)
+op5: u3(theta=0.968903, phi=-2.374691, lam=-2.141675, qubit=4)
+op6: cnot[4,6]
+op7: u3(theta=1.006803, phi=2.906042, lam=-0.956046, qubit=4)
+op8: u3(theta=0.173766, phi=-1.292069, lam=-1.570409, qubit=6)
+op9: u3(theta=-1.376548, phi=3.142024, lam=1.457661, qubit=0)
+op10: u3(theta=1.013122, phi=-1.371585, lam=-2.161450, qubit=1)
+op11: cnot[0,1]
+op12: u3(theta=0.816992, phi=2.116407, lam=-2.664098, qubit=0)
+op13: u3(theta=1.778655, phi=-1.725369, lam=-1.782239, qubit=1)
+op14: cnot[1,4]
+op15: u3(theta=-2.290099, phi=-1.582414, lam=-0.757576, qubit=1)
+op16: u3(theta=2.143082, phi=2.841308, lam=2.210546, qubit=4)
+op17: cnot[0,1]
+op18: u3(theta=2.213117, phi=0.478879, lam=0.233527, qubit=0)
+op19: u3(theta=0.002342, phi=-1.811255, lam=-2.219745, qubit=1)
+op20: cnot[1,4]
+op21: u3(theta=-1.034237, phi=-3.709444, lam=0.228648, qubit=1)
+op22: u3(theta=0.751517, phi=-0.439392, lam=2.150211, qubit=4)
+op23: cnot[0,1]
+op24: u3(theta=0.005158, phi=1.895244, lam=-2.503783, qubit=0)
+op25: u3(theta=-1.043137, phi=-3.070999, lam=2.529898, qubit=1)
+op26: cnot[1,4]
+op27: u3(theta=1.421271, phi=3.102509, lam=-0.689646, qubit=1)
+op28: u3(theta=1.705207, phi=1.486058, lam=-1.099653, qubit=4)
+op29: u3(theta=-0.000004, phi=-0.385834, lam=-2.161450, qubit=2)
+op30: cnot[1,2]
+op31: u3(theta=-4.712378, phi=2.149953, lam=0.612637, qubit=1)
+op32: u3(theta=1.570802, phi=-3.141593, lam=3.155190, qubit=2)
+op33: cnot[1,2]
+op34: u3(theta=1.570784, phi=-1.807427, lam=-2.149953, qubit=1)
+op35: u3(theta=2.877186, phi=-2.616374, lam=1.954433, qubit=2)
+op36: u3(theta=-0.000027, phi=-1.948411, lam=-2.161450, qubit=5)
+op37: cnot[2,5]
+op38: u3(theta=-3.141581, phi=1.980132, lam=0.943005, qubit=2)
+op39: u3(theta=0.337761, phi=-0.847578, lam=-1.440808, qubit=5)
+op40: u3(theta=1.196548, phi=-1.359747, lam=-1.666264, qubit=7)
+op41: cnot[4,5]
+op42: u3(theta=0.614299, phi=-2.791677, lam=-3.047735, qubit=4)
+op43: u3(theta=1.399455, phi=-1.921062, lam=-1.314083, qubit=5)
+op44: cnot[5,7]
+op45: u3(theta=-1.610661, phi=-1.939180, lam=-0.953299, qubit=5)
+op46: u3(theta=2.650892, phi=-0.353598, lam=-1.574973, qubit=7)
+op47: cnot[4,5]
+op48: u3(theta=2.718400, phi=-0.822632, lam=0.851848, qubit=4)
+op49: u3(theta=1.235426, phi=-1.805937, lam=-2.821721, qubit=5)
+op50: cnot[5,7]
+op51: u3(theta=-0.763690, phi=-2.297704, lam=0.233910, qubit=5)
+op52: u3(theta=2.225337, phi=0.362093, lam=2.075074, qubit=7)
+op53: cnot[4,5]
+op54: u3(theta=0.469408, phi=-1.383034, lam=1.165612, qubit=4)
+op55: u3(theta=1.218272, phi=-2.276080, lam=2.054703, qubit=5)
+op56: cnot[5,7]
+op57: u3(theta=-3.211153, phi=-2.645941, lam=-1.393453, qubit=5)
+op58: u3(theta=2.939149, phi=2.473323, lam=-0.545668, qubit=7)
+op59: cnot[4,5]
+op60: u3(theta=1.466937, phi=1.186688, lam=-0.620004, qubit=4)
+op61: u3(theta=-2.858331, phi=0.686521, lam=-2.860804, qubit=5)
+op62: cnot[5,7]
+op63: u3(theta=1.613543, phi=2.061893, lam=-3.888608, qubit=5)
+op64: u3(theta=0.121101, phi=2.582626, lam=-0.992794, qubit=7)
+op65: cnot[6,7]
+op66: u3(theta=-1.801679, phi=2.149951, lam=1.291736, qubit=6)
+op67: u3(theta=1.363399, phi=-3.244676, lam=2.036359, qubit=7)
+op68: cnot[6,7]
+op69: u3(theta=1.570797, phi=-1.570897, lam=-2.149952, qubit=6)
+op70: u3(theta=2.036422, phi=0.333566, lam=2.980942, qubit=7)
+op71: u3(theta=1.570785, phi=0.000003, lam=-2.161450, qubit=8)
+op72: cnot[7,8]
+op73: u3(theta=1.088444, phi=-0.093655, lam=-0.480118, qubit=7)
+op74: u3(theta=1.570798, phi=-3.012256, lam=3.141598, qubit=8)
+op75: cnot[4,7]
+op76: u3(theta=-1.178583, phi=2.029049, lam=0.369430, qubit=4)
+op77: u3(theta=-0.669413, phi=-1.947335, lam=2.232121, qubit=7)
+op78: cnot[4,7]
+op79: u3(theta=1.570775, phi=-1.570698, lam=2.683362, qubit=4)
+op80: u3(theta=-3.141697, phi=0.137919, lam=1.708719, qubit=7)

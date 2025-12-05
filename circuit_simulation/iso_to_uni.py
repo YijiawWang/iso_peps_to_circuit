@@ -51,7 +51,7 @@ def main():
 
     from iso_to_uni import iso_to_uni, ISO_TENSOR_QUBITS
 
-    iso_dir = os.path.join(base_dir, "..", "gates", "iso_tensors")
+    iso_dir = os.path.join(base_dir, "..", "gates_2patterns", "iso_tensors")
 
     # Files are expected to be tensor0.pt, tensor1.pt, ...
     files = [f"tensor{i}.pt" for i in range(len(INDICES))]

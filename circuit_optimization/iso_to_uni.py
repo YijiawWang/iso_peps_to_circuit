@@ -88,8 +88,8 @@ def iso_to_uni(iso_tensor: torch.Tensor, qubits: List[int]) -> torch.Tensor:
 
 
 def convert_all_iso_to_unitary(
-    iso_folder: str = "../gates/iso_tensors",
-    out_folder: str = "../gates/unitary_gates",
+    iso_folder: str = "../gates_2patterns/iso_tensors",
+    out_folder: str = "../gates_2patterns/unitary_gates",
 ) -> None:
     """
     Read all iso-tensors from iso_folder, apply iso_to_uni, and save the resulting

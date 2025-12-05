@@ -127,7 +127,7 @@ def check_single_gate(idx: int, base_dir: str) -> None:
     print("=" * 70)
     print(f"Checking tensor{idx}")
 
-    dec_dir = os.path.join(base_dir, "gates", "decomposed_gates", f"gate_index{idx}")
+    dec_dir = os.path.join(base_dir, "gates_2patterns", "decomposed_gates", f"gate_index{idx}")
     info_path = os.path.join(dec_dir, "info.txt")
     gate_mat_path = os.path.join(dec_dir, "gate_matrix.pt")
 
@@ -154,7 +154,7 @@ def check_single_gate(idx: int, base_dir: str) -> None:
     print(f"  ||rebuilt - gate_matrix||_F = {diff_rec:.3e}")
 
     # Optional: compare to original unitary_gates tensor{i}.pt via isometry
-    unit_path = os.path.join(base_dir, "gates", "unitary_gates", f"tensor{idx}.pt")
+    unit_path = os.path.join(base_dir, "gates_2patterns", "unitary_gates", f"tensor{idx}.pt")
     if os.path.exists(unit_path):
         unit_tensor = torch.load(unit_path, weights_only=False)
         if not unit_tensor.is_complex():

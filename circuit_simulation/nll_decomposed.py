@@ -30,7 +30,7 @@ def load_decomposed_gates():
     """
     gates = []
     for i in gate_order:
-        gate_path = f"../gates/decomposed_gates/gate_index{i}/gate_matrix.pt"
+        gate_path = f"../gates_2patterns/decomposed_gates/gate_index{i}/gate_matrix.pt"
         gate = torch.load(gate_path).detach()
         print(f"{i} ", end="")
         gates.append(gate)
@@ -248,9 +248,10 @@ def plot_image_grid(image_list: np.array,
 
 # Same STANDARD_INDICES as in nll_unitary.py
 STANDARD_INDICES = [
-    [1, 1, 0, 1, 0, 0, 0, 0, 0],
+    # [1, 1, 0, 1, 0, 0, 0, 0, 0],
     [0, 0, 1, 0, 0, 1, 1, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 1, 1],
+    # [0, 0, 0, 0, 1, 0, 0, 1, 1]
+    [1, 0, 0, 0, 0, 1, 0, 1, 0],
 ]
 
 QUBITS_MAPPING = {

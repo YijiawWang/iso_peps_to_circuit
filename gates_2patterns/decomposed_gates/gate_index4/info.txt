@@ -1,0 +1,47 @@
+gate index: 4
+max_iter: 500
+num_layers: 4
+ci: [1, 1, 0]
+final fidelity: 0.994756384985
+final loss (1 - fidelity): 5.243615014976e-03
+final loss_fn (Frobenius): 1.842136896649e+00
+iterations: 173
+optimization time: 89.46 seconds
+num_qubits: 3
+num_params: 81
+num_ops: 35
+op0: u3(theta=0.814657, phi=3.031644, lam=2.871390, qubit=0)
+op1: u3(theta=0.404622, phi=-0.720879, lam=-2.597903, qubit=1)
+op2: u3(theta=-2.937731, phi=2.246810, lam=0.635324, qubit=2)
+op3: cnot[0,1]
+op4: u3(theta=0.618935, phi=-2.577941, lam=3.152257, qubit=0)
+op5: u3(theta=1.399455, phi=-1.921062, lam=-1.314083, qubit=1)
+op6: u3(theta=-1.805163, phi=-1.204127, lam=0.101607, qubit=2)
+op7: cnot[1,2]
+op8: u3(theta=-0.048322, phi=-1.282952, lam=1.137101, qubit=0)
+op9: u3(theta=-1.610661, phi=-1.939180, lam=-0.953299, qubit=1)
+op10: u3(theta=-0.305394, phi=1.660538, lam=-1.704550, qubit=2)
+op11: cnot[0,1]
+op12: u3(theta=0.519731, phi=0.802113, lam=-2.820941, qubit=0)
+op13: u3(theta=1.235426, phi=-1.805937, lam=-2.821721, qubit=1)
+op14: u3(theta=3.333239, phi=2.993405, lam=1.806450, qubit=2)
+op15: cnot[1,2]
+op16: u3(theta=-2.884914, phi=-2.259142, lam=1.379032, qubit=0)
+op17: u3(theta=-0.763690, phi=-2.297704, lam=0.233910, qubit=1)
+op18: u3(theta=-3.606357, phi=2.902466, lam=-1.778418, qubit=2)
+op19: cnot[0,1]
+op20: u3(theta=0.967011, phi=-1.129730, lam=0.394842, qubit=0)
+op21: u3(theta=1.218272, phi=-2.276080, lam=2.054703, qubit=1)
+op22: u3(theta=1.292205, phi=3.194223, lam=2.811419, qubit=2)
+op23: cnot[1,2]
+op24: u3(theta=0.686474, phi=2.889592, lam=-2.532268, qubit=0)
+op25: u3(theta=-3.211153, phi=-2.645941, lam=-1.393453, qubit=1)
+op26: u3(theta=-0.302630, phi=-1.012990, lam=0.828683, qubit=2)
+op27: cnot[0,1]
+op28: u3(theta=0.670013, phi=-1.010206, lam=0.507154, qubit=0)
+op29: u3(theta=-2.858331, phi=0.686521, lam=-2.860804, qubit=1)
+op30: u3(theta=2.813809, phi=1.335037, lam=-1.469362, qubit=2)
+op31: cnot[1,2]
+op32: u3(theta=-2.337475, phi=0.501679, lam=1.665931, qubit=0)
+op33: u3(theta=1.613543, phi=2.061893, lam=-3.888608, qubit=1)
+op34: u3(theta=-0.121105, phi=-2.129469, lam=2.148594, qubit=2)

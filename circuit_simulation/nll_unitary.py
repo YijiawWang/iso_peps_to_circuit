@@ -38,7 +38,7 @@ def load_unitary_gates():
     """
     gates = []
     for i in gate_order:
-        gate = torch.load(f'../gates/unitary_gates/tensor{i}.pt').detach()
+        gate = torch.load(f'../gates_2patterns/unitary_gates/tensor{i}.pt').detach()
         print(i, end=', ')
         gates.append(gate)
     return gates
@@ -185,9 +185,10 @@ def plot_samples(samples, filename="samples.png", grid_shape=(5, 6)):
 
 # Standard indices for evaluation
 STANDARD_INDICES = [
-    [1, 1, 0, 1, 0, 0, 0, 0, 0],
+    # [1, 1, 0, 1, 0, 0, 0, 0, 0],
     [0, 0, 1, 0, 0, 1, 1, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 1, 1]
+    # [0, 0, 0, 0, 1, 0, 0, 1, 1]
+    [1, 0, 0, 0, 0, 1, 0, 1, 0],
 ]
 
 

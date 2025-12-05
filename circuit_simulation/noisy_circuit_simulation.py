@@ -24,7 +24,7 @@ from optimize_unitary_gates import u3_matrix, cnot_matrix
 import nll_decomposed
 
 # Path to final circuit info.txt
-FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates", "final_circuit", "info.txt")
+FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit", "info.txt")
 
 # Regex patterns for parsing info.txt
 _RE_U3 = re.compile(

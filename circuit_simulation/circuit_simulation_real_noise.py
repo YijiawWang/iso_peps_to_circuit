@@ -33,7 +33,7 @@ try:
 except ImportError:
     print("Warning: nll_decomposed module not found.")
 
-FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates", "final_circuit", "info.txt")
+FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit", "info.txt")
 
 _RE_U3 = re.compile(r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)")
 _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")

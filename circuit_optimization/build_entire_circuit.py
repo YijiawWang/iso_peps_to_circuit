@@ -247,7 +247,7 @@ def main():
         print("✓ Optimized circuit matches original circuit (fidelity = 1.0)")
     
     # Save to gates/final_circuit
-    output_dir = os.path.join(BASE_DIR, "gates", "final_circuit")
+    output_dir = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit")
     print(f"\nSaving optimized circuit to: {output_dir}")
     save_circuit_to_folder(qc_optimized, output_dir)
     

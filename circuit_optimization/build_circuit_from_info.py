@@ -10,7 +10,7 @@ from typing import List, Tuple
 from qiskit import QuantumCircuit
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DECOMP_BASE = os.path.join(BASE_DIR, "gates", "decomposed_gates")
+DECOMP_BASE = os.path.join(BASE_DIR, "gates_2patterns", "decomposed_gates")
 
 # Qubit pattern for each gate (same as in nll_circuit.py)
 ag = [
