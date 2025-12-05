@@ -1,0 +1,9 @@
+{
+    "backend": "ibm_fez",
+    "job_id": "d4pbanc5fjns73cv6bp0",
+    "date": "20251205_183530",
+    "shots": 4096,
+    "nll": 1.1602472698962145,
+    "circuit_depth": 150,
+    "cnot_count": 0
+}

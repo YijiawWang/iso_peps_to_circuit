@@ -2,18 +2,19 @@
 EXECUTION ON REAL IBM QUANTUM HARDWARE
 ======================================================================
    [Info] Connecting to IBM Quantum Service...
-   [Info] Available backends: ['ibm_fez', 'ibm_torino', 'ibm_marrakesh']
+   [Info] Available backends: ['ibm_fez', 'ibm_marrakesh', 'ibm_torino']
    [Info] Preferred backends busy or unavailable. Selecting least busy...
    [Info] Selected least busy backend: ibm_fez
    [Target] Running on: ibm_fez (156 qubits)
    [Info] Transpiling circuit (Optimization Level 3)...
-   [Stats] Final Depth: 146
+   [Stats] Final Depth: 150
    [Stats] CNOT Count: 0
    [Info] Submitting Job to Queue...
-   [Job ID] d4p91pk5fjns73cv442g
+   [Job ID] d4pbanc5fjns73cv6bp0
    [Info] Waiting for results... (This may take minutes to hours)
    [Info] Job completed!
-NLL: 1.4959781137872412
+[0, 0, 1, 0, 0, 1, 1, 0, 0] tensor(0.3347, dtype=torch.float64)
+NLL: 1.1602472698962145
 
-   [Result] NLL on Hardware: 1.495978
-   [Info] Plot saved to C:\Users\ASUS\Desktop\isopeps\iso_peps_to_circuit\results_hardware\ibm_fez_20251205_155941
+   [Result] NLL on Hardware: 1.160247
+   [Info] Plot saved to C:\Users\ASUS\Desktop\isopeps\iso_peps_to_circuit\results_hardware\ibm_fez_20251205_183530
