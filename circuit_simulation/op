@@ -1,0 +1,6 @@
+======================================================================
+EXECUTION ON REAL IBM QUANTUM HARDWARE
+======================================================================
+   [Info] Connecting to IBM Quantum Service...
+   [Error] Failed to connect?: HTTPSConnectionPool(host='globalcatalog.cloud.ibm.com', port=443): Max retries exceeded with url: /api/v1/850b21a7-71de-4e53-9441-1abdd202f35d (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f15204b4470>: Failed to resolve 'globalcatalog.cloud.ibm.com' ([Errno -3] Temporary failure in name resolution)"))
+   Did you run QiskitRuntimeService.save_account()?
