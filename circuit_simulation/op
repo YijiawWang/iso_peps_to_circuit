@@ -2,5 +2,18 @@
 EXECUTION ON REAL IBM QUANTUM HARDWARE
 ======================================================================
    [Info] Connecting to IBM Quantum Service...
-   [Error] Failed to connect?: HTTPSConnectionPool(host='globalcatalog.cloud.ibm.com', port=443): Max retries exceeded with url: /api/v1/850b21a7-71de-4e53-9441-1abdd202f35d (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f15204b4470>: Failed to resolve 'globalcatalog.cloud.ibm.com' ([Errno -3] Temporary failure in name resolution)"))
-   Did you run QiskitRuntimeService.save_account()?
+   [Info] Available backends: ['ibm_fez', 'ibm_torino', 'ibm_marrakesh']
+   [Info] Preferred backends busy or unavailable. Selecting least busy...
+   [Info] Selected least busy backend: ibm_fez
+   [Target] Running on: ibm_fez (156 qubits)
+   [Info] Transpiling circuit (Optimization Level 3)...
+   [Stats] Final Depth: 146
+   [Stats] CNOT Count: 0
+   [Info] Submitting Job to Queue...
+   [Job ID] d4p91pk5fjns73cv442g
+   [Info] Waiting for results... (This may take minutes to hours)
+   [Info] Job completed!
+NLL: 1.4959781137872412
+
+   [Result] NLL on Hardware: 1.495978
+   [Info] Plot saved to C:\Users\ASUS\Desktop\isopeps\iso_peps_to_circuit\results_hardware\ibm_fez_20251205_155941
