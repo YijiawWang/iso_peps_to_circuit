@@ -63,36 +63,101 @@ def build_qiskit_circuit(operations, num_qubits=9):
     return qc
 
 def create_brisbane_noise_model():
-    """Extract average noise parameters."""
+    """
+    Extracts AVERAGE noise parameters from FakeBrisbane and builds
+    a comprehensive noise model including T1/T2 relaxation.
+    """
+    # 尝试获取 FakeBrisbane，如果没有则使用通用噪声
     if FakeBrisbane is None:
         print("   [Warn] FakeBrisbane not found, using generic noise.")
         noise_model = NoiseModel()
-        noise_model.add_all_qubit_quantum_error(depolarizing_error(0.01, 1), ['u1', 'u2', 'u3', 'sx', 'x'])
-        noise_model.add_all_qubit_quantum_error(depolarizing_error(0.08, 2), ['cx'])
+        # 通用参数估算
+        error_1q = depolarizing_error(0.0002, 1)
+        error_2q = depolarizing_error(0.008, 2)
+        # 这里为了简单，通用模式下只加去极化，或者你可以手动加通用的热弛豫
+        noise_model.add_all_qubit_quantum_error(error_1q, ['u1', 'u2', 'u3', 'sx', 'x', 'rz', 'id'])
+        noise_model.add_all_qubit_quantum_error(error_2q, ['cx', 'ecr'])
         return noise_model
 
     print("   [Info] Extracting calibration data from FakeBrisbane...")
     backend = FakeBrisbane()
     props = backend.properties()
     
-    # Calculate Averages (Simplified)
+    # 1. Calculate Average T1 and T2
     t1s = [props.t1(i) for i in range(backend.num_qubits) if props.t1(i)]
     t2s = [props.t2(i) for i in range(backend.num_qubits) if props.t2(i)]
-    avg_t1 = np.mean(t1s) if t1s else 300e-6
-    avg_t2 = np.mean(t2s) if t2s else 300e-6
     
-    # Estimate Gate Errors
-    cx_errs = [g.parameters[0].value for g in props.gates if g.gate == 'ecr']
+    if not t1s: 
+        avg_t1, avg_t2 = 280e-6, 150e-6 # fallback
+    else:
+        avg_t1 = np.mean(t1s)
+        avg_t2 = np.mean(t2s)
+        
+    # [Safety Check] T2 cannot be greater than 2*T1 in physics
+    if avg_t2 > 2 * avg_t1:
+        avg_t2 = 2 * avg_t1
+    
+    # 2. Calculate Average Gate Errors (Depolarizing component)
+    # SX gate (single qubit)
+    sx_errs = []
+    for i in range(backend.num_qubits):
+        try:
+            err = props.gate_error('sx', [i])
+            if err: sx_errs.append(err)
+        except: pass
+    avg_1q_err = np.mean(sx_errs) if sx_errs else 0.0002
+
+    # ECR/CNOT gate (two qubit)
+    cx_errs = []
+    for gate in props.gates:
+        if gate.gate == 'ecr' or gate.gate == 'cx':
+            cx_errs.append(gate.parameters[0].value)
     avg_2q_err = np.mean(cx_errs) if cx_errs else 0.008
-    avg_1q_err = avg_2q_err / 10.0 # Heuristic
+    
+    print(f"   [Brisbane Stats] Avg T1: {avg_t1*1e6:.2f} us")
+    print(f"   [Brisbane Stats] Avg T2: {avg_t2*1e6:.2f} us")
+    print(f"   [Brisbane Stats] Avg 1-qubit Gate Err: {avg_1q_err:.4%}")
+    print(f"   [Brisbane Stats] Avg 2-qubit Gate Err: {avg_2q_err:.4%}")
 
-    print(f"   [Stats] T1: {avg_t1*1e6:.1f}us, CNOT Err: {avg_2q_err:.2%}")
+    # 3. Define Gate Times (Crucial for Thermal Relaxation)
+    # Based on typical IBM Eagle processor specs
+    time_1q = 35e-9   # 35 ns for single qubit gates
+    time_2q = 300e-9  # 300 ns for two qubit gates (ECR/CX)
 
+    # 4. Build Noise Model
     noise_model = NoiseModel()
-    error_1q = depolarizing_error(avg_1q_err, 1)
-    error_2q = depolarizing_error(avg_2q_err, 2)
-    noise_model.add_all_qubit_quantum_error(error_1q, ['u1', 'u2', 'u3', 'sx', 'x'])
-    noise_model.add_all_qubit_quantum_error(error_2q, ['cx', 'ecr'])
+    
+    # --- Single Qubit Errors ---
+    # A. Depolarizing Error (Gate imperfection)
+    depol_1q = depolarizing_error(avg_1q_err, 1)
+    
+    # B. Thermal Relaxation Error (Decay over time)
+    # thermal_relaxation_error(t1, t2, time)
+    therm_1q = thermal_relaxation_error(avg_t1, avg_t2, time_1q)
+    
+    # C. Combine (Compose)
+    # Error_Total = Depolarizing * Thermal
+    total_error_1q = depol_1q.compose(therm_1q)
+    
+    # Add to model for all 1-qubit gates
+    noise_model.add_all_qubit_quantum_error(total_error_1q, ['u1', 'u2', 'u3', 'sx', 'x', 'rz', 'id'])
+    
+    # --- Two Qubit Errors ---
+    # A. Depolarizing Error
+    depol_2q = depolarizing_error(avg_2q_err, 2)
+    
+    # B. Thermal Relaxation Error
+    # For a 2-qubit gate, relaxation happens on BOTH qubits independently.
+    # We create a 1-qubit thermal error for the duration of the 2-qubit gate...
+    therm_2q_single = thermal_relaxation_error(avg_t1, avg_t2, time_2q)
+    # ...and then expand it to a tensor product (Error on Q1 ⊗ Error on Q2)
+    therm_2q = therm_2q_single.expand(therm_2q_single)
+    
+    # C. Combine
+    total_error_2q = depol_2q.compose(therm_2q)
+    
+    # Add to model for all 2-qubit gates
+    noise_model.add_all_qubit_quantum_error(total_error_2q, ['cx', 'ecr'])
     
     return noise_model
 
