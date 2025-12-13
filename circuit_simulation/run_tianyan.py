@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""
+EXECUTE isoPEPS on TIANYAN using NATIVE CQLIB (No Adapter).
+
+Mechanism:
+1. Parses info.txt for 'u3' and 'cnot' gates.
+2. Manually decomposes 'u3(theta, phi, lam)' -> RZ(lam)-RY(theta)-RZ(phi).
+3. Constructs a native cqlib.Circuit.
+4. Submits directly via TianYanPlatform.
+"""
+
+import torch
+import numpy as np
+import os
+import sys
+import re
+import json
+import time
+from datetime import datetime
+
+# --- Native TianYan SDK Import ---
+try:
+    from cqlib import TianYanPlatform
+    from cqlib.circuits import Circuit
+except ImportError:
+    print("Error: cqlib not found. Please run: pip install cqlib -i https://pypi.tuna.tsinghua.edu.cn/simple")
+    sys.exit(1)
+
+# Add paths
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+SRC_DIR = os.path.join(BASE_DIR, "circuit_optimization")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+try:
+    import nll_decomposed
+except ImportError:
+    pass
+
+FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit", "info.txt")
+
+# Regex patterns
+_RE_U3 = re.compile(r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)")
+_RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
+
+def parse_info_file(info_path: str):
+    operations = []
+    with open(info_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("num_"): continue
+            m_u3 = _RE_U3.match(line)
+            if m_u3:
+                operations.append({
+                    'type': 'u3', 
+                    'params': (float(m_u3.group(1)), float(m_u3.group(2)), float(m_u3.group(3))), 
+                    'qubits': [int(m_u3.group(4))]
+                })
+            m_cx = _RE_CNOT.match(line)
+            if m_cx:
+                operations.append({
+                    'type': 'cnot', 
+                    'params': (int(m_cx.group(1)), int(m_cx.group(2))), 
+                    'qubits': [int(m_cx.group(1)), int(m_cx.group(2))]
+                })
+    return operations
+
+def build_native_cqlib_circuit(operations, num_qubits=9):
+    """
+    Constructs a cqlib Circuit by manually decomposing U3 gates.
+    Qiskit U3(theta, phi, lam) is equivalent to: RZ(phi) * RY(theta) * RZ(lam)
+    In circuit execution order (left to right): RZ(lam) -> RY(theta) -> RZ(phi)
+    """
+    # Initialize circuit with specific qubit indices
+    qubit_indices = list(range(num_qubits))
+    circuit = Circuit(qubits=qubit_indices)
+    
+    for op in operations:
+        if op['type'] == 'cnot':
+            control, target = op['params']
+            circuit.cx(control, target)
+            
+        elif op['type'] == 'u3':
+            theta, phi, lam = op['params']
+            q = op['qubits'][0]
+            
+            # Manual Decomposition for Tianyan Native Gates
+            # Avoids 'u3 not supported' error by using standard Euler angles
+            if abs(lam) > 1e-8:
+                circuit.rz(q, lam)
+            if abs(theta) > 1e-8:
+                circuit.ry(q, theta)
+            if abs(phi) > 1e-8:
+                circuit.rz(q, phi)
+                
+    # Add measurement
+    circuit.measure_all()
+    return circuit
+
+import numpy as np
+import torch
+import sys
+from collections import Counter
+
+
+def get_best_3x3_mapping():
+    """
+    定义一个手动映射。
+    这里需要根据天衍-176 或 287 的实际拓扑图来填。
+    假设我们找到了一个完美的 3x3 区域，物理编号如下（示例）：
+    
+    Physical Layout (Example Grid):
+    12 -- 13 -- 14
+    |     |     |
+    22 -- 23 -- 24
+    |     |     |
+    32 -- 33 -- 34
+    
+    Logical Qubits: 0..8
+    """
+    # 这是一个示例映射，实际需要您查看 platform.download_config() 下来的拓扑图
+    # 或者询问技术支持哪个区域最好
+    mapping = {
+        0: 12, 1: 13, 2: 14,
+        3: 22, 4: 23, 5: 24,
+        6: 32, 7: 33, 8: 34
+    }
+    return mapping
+
+
+def calculate_fidelity_and_nll_from_cqlib_result(experiment_result, num_qubits=9):
+    """
+    Parse cqlib experiment result to NLL and Tensors.
+    
+    Args:
+        experiment_result (dict): One item from the list returned by platform.query_experiment().
+                                  Contains 'resultStatus', 'probability', etc.
+        num_qubits (int): Total number of qubits in the circuit (default 9).
+        
+    Returns:
+        probs_tensor, nll, raw_samples_corrected, counts
+    """
+    
+    full_probs = np.zeros(2**num_qubits)
+    raw_samples_corrected = []
+    counts_for_saving = {}
+    raw_data = experiment_result.get('resultStatus', [])
+    
+    if len(raw_data) < 2:
+        raise ValueError("Invalid resultStatus: No shot data found.")
+
+    # Header: First element is the qubit mapping, e.g., [0, 1, 2, ..., 8]
+    # We assume the user measures all qubits in order for NLL calc.
+    qubit_labels = raw_data[0] 
+    
+    # Body: The rest are shots, e.g., [[0, 1, ...], [1, 1, ...]]
+    shots_data = raw_data[1:]
+    total_shots = len(shots_data)
+    
+    # Convert list of lists [[0,1], [1,0]] to list of strings ["01", "10"]
+    # Note: cqlib raw data order usually matches the 'qubit_labels' order.
+    # If qubit_labels is [0, 1, ...], then result [v0, v1] means q0=v0, q1=v1.
+    # This corresponds to Little Endian string "v1v0" (q0 at right) or Big Endian "v0v1".
+    # To maintain consistency with 'probability' dict keys (usually Little Endian in Strings),
+    # we construct the string such that q0 is at the end (Little Endian).
+    
+    # Let's count the occurrences
+    # Convert each shot (list of ints) to a tuple for counting
+    shots_as_tuples = [tuple(shot) for shot in shots_data]
+    counts_obj = Counter(shots_as_tuples)
+    
+    for shot_tuple, count in counts_obj.items():
+        # shot_tuple is (val_q0, val_q1, val_q2...) based on qubit_labels [0, 1, 2...]
+        # We construct a bitstring. 
+        # If we follow Qiskit standard (Little Endian string): "qn...q1q0"
+        # The shot_tuple is [q0, q1, ... qn]. So we need to reverse the tuple to make the string.
+        
+        # Convert [1, 0, 0] (q0=1) -> "001"
+        bitstring = "".join(str(bit) for bit in shot_tuple[::-1])
+        
+        counts_for_saving[bitstring] = count
+        prob = count / total_shots
+        
+        # User logic: reverse bitstring again for Tensor
+        # "001" [::-1] -> "100" -> Tensor [1, 0, 0]
+        reversed_bs = bitstring[::-1]
+        
+        raw_samples_corrected.extend([reversed_bitstring_to_tensor(reversed_bs)] * count)
+        
+        idx = int(reversed_bs, 2)
+        full_probs[idx] = prob
+
+    # =========================================================================
+    # Common: Tensor Creation & NLL
+    # =========================================================================
+    probs_tensor = torch.tensor(full_probs, dtype=torch.float64)
+    
+    # Safe Normalize
+    probs_safe = probs_tensor + 1e-12
+    probs_safe /= probs_safe.sum()
+    
+    # Calculate NLL
+    nll = 0.0
+    pseudo_state = torch.sqrt(probs_safe).reshape(*([2] * num_qubits))
+    
+    if 'nll_decomposed' in sys.modules:
+        try:
+            nll = nll_decomposed.calculate_nll(pseudo_state, nll_decomposed.STANDARD_INDICES)
+        except Exception as e:
+            # print(f"NLL Error: {e}")
+            pass
+            
+    return probs_tensor, nll, raw_samples_corrected, counts_for_saving
+
+def reversed_bitstring_to_tensor(bitstring):
+    """Helper: '101' -> torch.tensor([1, 0, 1])"""
+    return torch.tensor([int(c) for c in bitstring], dtype=torch.uint8)
+
+def main():
+    print("=" * 70)
+    print(f"EXECUTION ON TIANYAN (Native Cqlib)")
+    print("=" * 70)
+    
+    # 1. Parse Info
+    if not os.path.exists(FINAL_CIRCUIT_INFO):
+        raise FileNotFoundError(f"Not found: {FINAL_CIRCUIT_INFO}")
+    operations = parse_info_file(FINAL_CIRCUIT_INFO)
+    
+    # 2. Build Native Circuit
+    print("   [Info] Building cqlib circuit (Decomposing U3 -> RZ, RY)...")
+    cqlib_circuit = build_native_cqlib_circuit(operations)
+    
+    # Optional: Print QCIS to verify it looks clean
+    # print(f"   [Debug] QCIS Script:\n{cqlib_circuit.qcis[:200]}...") 
+
+    # 3. Connect
+    print("   [Info] Connecting to TianYanPlatform...")
+    # 请填入您的 Key
+    # TOKEN = os.getenv('TIANYAN_API_KEY', 'YOUR_LOGIN_KEY_HERE')
+    TOKEN = "NqoQ5D24VQ2ky0vucVXLzCe6ozgmOdFVUSQHtt0OxhY="
+    
+    try:
+        platform = TianYanPlatform(login_key=TOKEN)
+    except Exception as e:
+        print(f"   [Error] Connection failed: {e}")
+        return
+
+    # 4. Select Machine
+    # 先列出可用机器
+    try:
+        computers = platform.query_quantum_computer_list()
+        print(f"   [Info] Available computers: {[c['code'] for c in computers]}")
+    except:
+        pass
+
+    # 目标机器：为了测试，先用模拟器 'tianyan_swn' 或 'tianyan_sw'
+    # 如果要跑真机，改为 'tianyan-287' 或 'tianyan504'
+    # target_machine = "tianyan_sw" 
+    target_machine = "tianyan176"
+    print(f"   [Target] Setting machine to: {target_machine}")
+    # platform.set_machine(target_machine)
+    try:
+        # 设置目标机器
+        platform.set_machine(target_machine)
+        # [关键步骤] 下载机器的硬件配置（包含拓扑图）
+        print(f"   [Info] Downloading hardware config/topology for {target_machine}...")
+        config = platform.download_config(machine=target_machine)
+    except Exception as e:
+        print(f"   [Error] Failed to get config for {target_machine}: {e}")
+        return
+
+    from cqlib.mapping import transpile_qcis as transpile
+    print("   [Info] Transpiling circuit to match hardware topology...")
+    try:
+        # transpile 会返回一个新的 Circuit 对象，其中的门和比特索引已经适配了硬件
+        # 它会自动插入 SWAP 门来解决不连通的问题
+        compiled_circuit, initial_layout, swap_mapping, mapping_virtual_to_final = transpile(cqlib_circuit.qcis, platform)
+        print("   [Success] Circuit transpiled successfully.")
+        # 可选：打印一下转译后的 QCIS 看看有什么不同
+        # print(f"   [Debug] Compiled QCIS snippet:\n{compiled_circuit.qcis[:100]}...")
+    except Exception as e:
+        print(f"   [Error] Transpilation failed: {e}")
+        print("   Make sure your logical circuit fits on the chip.")
+        return
+
+    # 5. Submit Experiment
+    shots = 5000
+    print(f"   [Info] Submitting experiment (Shots={shots})...")
+    
+    try:
+        # submit_experiment 接受 circuit.qcis 字符串
+        query_id = platform.submit_experiment(
+            circuit=compiled_circuit.qcis,
+            num_shots=shots
+        )
+        print(f"   [Query ID] {query_id}")
+    except Exception as e:
+        print(f"   [Error] Submission failed: {e}")
+        return
+
+    # 6. Query Results
+    print("   [Info] Waiting for results (polling)...")
+    try:
+        # cqlib 提供了轮询等待机制
+        exp_results = platform.query_experiment(query_id=query_id, max_wait_time=300, sleep_time=5)
+    except Exception as e:
+        print(f"   [Error] Query failed: {e}")
+        return
+
+    if not exp_results or len(exp_results) == 0:
+        print("   [Error] Empty result returned.")
+        return
+
+    # 7. Process Data
+    # cqlib 返回的结构是 list of dicts, key: "probability"
+    result_data = exp_results[0]
+    
+    if 'probability' not in result_data:
+        print(f"   [Error] 'probability' key not found in result. Keys: {result_data.keys()}")
+        # 如果是真机，有时可能会有 'count' 或其他字段，视版本而定
+        return
+        
+    # probs_dict = result_data['probability']
+    data_dict = result_data['resultStatus']
+    print(f"   [Info] Retrieved probabilities for {len(data_dict)-1} bitstrings.")
+    # label_list = data_dict[0]  # First entry is qubit labels
+    # samples_data = data_dict[1:]  # The rest are shots
+
+    # 8. Metrics & Save
+    # if probs_dict is None 
+    probs_tensor, nll, samples_list, counts = calculate_fidelity_and_nll_from_cqlib_result(result_data, 9)
+    print(f"\n   [Result] NLL on Tianyan ({target_machine}): {nll:.6f}")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_dir = os.path.join(BASE_DIR, "results_tianyan_native", f"{target_machine}_{timestamp}")
+    os.makedirs(save_dir, exist_ok=True)
+
+    metrics = {
+        "backend": target_machine,
+        "query_id": query_id,
+        "nll": float(nll),
+        "shots": shots
+    }
+    with open(os.path.join(save_dir, "metrics.json"), "w") as f:
+        json.dump(metrics, f, indent=4)
+        
+    torch.save(probs_tensor, os.path.join(save_dir, "probs.pt"))
+    if samples_list:
+        samples_tensor = torch.stack(samples_list)
+        torch.save(samples_tensor, os.path.join(save_dir, "samples.pt"))
+        print(f"   [Info] Saved to {save_dir}")
+
+if __name__ == "__main__":
+    main()
