@@ -250,7 +250,8 @@ def apply_two_qubit_gate_to_matrix(state_matrix: torch.Tensor, gate: torch.Tenso
 
 def build_ansatz_matrix(params: np.ndarray,
                        num_qubits: int = 3,
-                       num_layers: int = 1) -> Tuple[torch.Tensor, List[str]]:
+                       num_layers: int = 1,
+                       cnot_pairs: List[List[int]] = None) -> Tuple[torch.Tensor, List[str]]:
     """
     Build ansatz circuit matrix from parameters using pure PyTorch.
     
@@ -258,10 +259,28 @@ def build_ansatz_matrix(params: np.ndarray,
         params: Parameter array (theta, phi, lam for each U3 gate)
         num_qubits: Number of qubits
         num_layers: Number of layers
+        cnot_pairs: List of CNOT gate qubit pairs, e.g., [[0,1], [1,2]] or [[0,2], [1,2]].
+                    If None, defaults to [[0,1], [1,2]] for 3 qubits, [[0,1]] for 2 qubits.
+                    Each pair is [control, target].
     
     Returns:
         (matrix, gate_descriptions): Full unitary matrix and list of gate descriptions
     """
+    # Set default CNOT pairs if not provided
+    if cnot_pairs is None:
+        if num_qubits >= 3:
+            cnot_pairs = [[0, 1], [1, 2]]
+        elif num_qubits >= 2:
+            cnot_pairs = [[0, 1]]
+        else:
+            cnot_pairs = []
+    
+    # Validate CNOT pairs
+    for pair in cnot_pairs:
+        if len(pair) != 2:
+            raise ValueError(f"Each CNOT pair must have exactly 2 qubits, got {pair}")
+        if pair[0] < 0 or pair[0] >= num_qubits or pair[1] < 0 or pair[1] >= num_qubits:
+            raise ValueError(f"CNOT pair {pair} contains invalid qubit indices for {num_qubits} qubits")
     params_t = torch.tensor(params, dtype=torch.float64)
     idx = 0
     
@@ -282,26 +301,26 @@ def build_ansatz_matrix(params: np.ndarray,
             idx += 3
     else:
         for layer in range(num_layers):
-            # Only layer 0 has the leading U3(all)
-            if layer == 0:
-                for q in range(num_qubits):
-                    tx, ty, tz = params_t[idx:idx + 3]
-                    u3_gate = u3_matrix(tx, ty, tz)
-                    matrix = apply_single_qubit_gate_to_matrix(matrix, u3_gate, q, num_qubits)
-                    gate_descriptions.append(
-                        f"op{op_idx}: u3(theta={tx.item():.6f}, phi={ty.item():.6f}, lam={tz.item():.6f}, qubit={q})"
-                    )
-                    op_idx += 1
-                    idx += 3
+            # All layers start with U3(all) before the first CNOT
+            for q in range(num_qubits):
+                tx, ty, tz = params_t[idx:idx + 3]
+                u3_gate = u3_matrix(tx, ty, tz)
+                matrix = apply_single_qubit_gate_to_matrix(matrix, u3_gate, q, num_qubits)
+                gate_descriptions.append(
+                    f"op{op_idx}: u3(theta={tx.item():.6f}, phi={ty.item():.6f}, lam={tz.item():.6f}, qubit={q})"
+                )
+                op_idx += 1
+                idx += 3
             
-            if num_qubits >= 2:
-                # CNOT(0,1)
+            # Apply CNOT gates and U3 blocks according to cnot_pairs
+            for i, (control, target) in enumerate(cnot_pairs):
+                # Apply CNOT gate
                 cnot_gate = cnot_matrix()
-                matrix = apply_two_qubit_gate_to_matrix(matrix, cnot_gate, 0, 1, num_qubits)
-                gate_descriptions.append(f"op{op_idx}: cnot[0,1]")
+                matrix = apply_two_qubit_gate_to_matrix(matrix, cnot_gate, control, target, num_qubits)
+                gate_descriptions.append(f"op{op_idx}: cnot[{control},{target}]")
                 op_idx += 1
                 
-                # Second U3(all) block
+                # Apply U3(all) block after each CNOT
                 for q in range(num_qubits):
                     tx, ty, tz = params_t[idx:idx + 3]
                     u3_gate = u3_matrix(tx, ty, tz)
@@ -311,45 +330,45 @@ def build_ansatz_matrix(params: np.ndarray,
                     )
                     op_idx += 1
                     idx += 3
-                
-                if num_qubits >= 3:
-                    # CNOT(1,2)
-                    cnot_gate = cnot_matrix()
-                    matrix = apply_two_qubit_gate_to_matrix(matrix, cnot_gate, 1, 2, num_qubits)
-                    gate_descriptions.append(f"op{op_idx}: cnot[1,2]")
-                    op_idx += 1
-                    
-                    # Third U3(all) block
-                    for q in range(num_qubits):
-                        tx, ty, tz = params_t[idx:idx + 3]
-                        u3_gate = u3_matrix(tx, ty, tz)
-                        matrix = apply_single_qubit_gate_to_matrix(matrix, u3_gate, q, num_qubits)
-                        gate_descriptions.append(
-                            f"op{op_idx}: u3(theta={tx.item():.6f}, phi={ty.item():.6f}, lam={tz.item():.6f}, qubit={q})"
-                        )
-                        op_idx += 1
-                        idx += 3
     
     return matrix, gate_descriptions
 
 
-def count_num_params(num_qubits: int, num_layers: int) -> int:
-    """Count the number of parameters needed for the ansatz."""
+def count_num_params(num_qubits: int, num_layers: int, cnot_pairs: List[List[int]] = None) -> int:
+    """
+    Count the number of parameters needed for the ansatz.
+    
+    Args:
+        num_qubits: Number of qubits
+        num_layers: Number of layers
+        cnot_pairs: List of CNOT gate qubit pairs. If None, uses default pairs.
+    
+    Returns:
+        Number of parameters needed
+    """
+    # Set default CNOT pairs if not provided
+    if cnot_pairs is None:
+        if num_qubits >= 3:
+            cnot_pairs = [[0, 1], [1, 2]]
+        elif num_qubits >= 2:
+            cnot_pairs = [[0, 1]]
+        else:
+            cnot_pairs = []
+    
     if num_layers == 0:
         return 3 * num_qubits
     else:
-        # Layer 0: U3(all) + CNOT(0,1) + U3(all) [+ CNOT(1,2) + U3(all) if 3 qubits]
-        # Layer 1+: CNOT(0,1) + U3(all) [+ CNOT(1,2) + U3(all) if 3 qubits]
-        if num_qubits == 1:
-            return 3 * num_qubits * num_layers
-        elif num_qubits == 2:
-            # Layer 0: 3*2 + 3*2 = 12
-            # Layer 1+: 3*2 = 6 each
-            return 12 + 6 * (num_layers - 1)
-        else:  # num_qubits == 3
-            # Layer 0: 3*3 + 3*3 + 3*3 = 27
-            # Layer 1+: 3*3 + 3*3 = 18 each
-            return 27 + 18 * (num_layers - 1)
+        # Structure:
+        # All layers: U3(all) + [CNOT + U3(all)] for each CNOT pair
+        # Each U3(all) block has 3 * num_qubits parameters
+        
+        params_per_u3_block = 3 * num_qubits  # U3(all) block
+        params_per_cnot_block = 3 * num_qubits  # U3(all) after each CNOT
+        num_cnot_blocks = len(cnot_pairs)
+        
+        # Each layer: initial U3(all) + CNOT blocks
+        params_per_layer = params_per_u3_block + num_cnot_blocks * params_per_cnot_block
+        return params_per_layer * num_layers
 
 
 def fidelity_isometry(V_target: torch.Tensor,
@@ -369,9 +388,10 @@ def objective_function(params: np.ndarray,
                        target_isometry: torch.Tensor,
                        num_qubits: int,
                        num_layers: int,
-                       ci: List[int]) -> float:
+                       ci: List[int],
+                       cnot_pairs: List[List[int]] = None) -> float:
     """Objective function for optimization."""
-    matrix, _ = build_ansatz_matrix(params, num_qubits=num_qubits, num_layers=num_layers)
+    matrix, _ = build_ansatz_matrix(params, num_qubits=num_qubits, num_layers=num_layers, cnot_pairs=cnot_pairs)
     ansatz_iso = get_isometry_matrix(matrix, ci)
     fid = fidelity_isometry(target_isometry, ansatz_iso)
     return float(1.0 - fid)
@@ -393,10 +413,18 @@ def _num_layers_for_gate_idx(gate_idx: int) -> int:
 
 def optimize_gate(gate_idx: int,
                   max_iter: int = 500,
-                  seed: int = 42) -> Dict[str, Any]:
+                  seed: int = 42,
+                  cnot_pairs: List[List[int]] = None) -> Dict[str, Any]:
     """
     Optimize ansatz to fit unitary_gates/tensor{gate_idx}.pt
     and save result under ../gates/decomposed_gates/gate_index{gate_idx}.
+    
+    Args:
+        gate_idx: Index of the gate to optimize
+        max_iter: Maximum number of optimization iterations
+        seed: Random seed for parameter initialization
+        cnot_pairs: List of CNOT gate qubit pairs, e.g., [[0,1], [1,2]] or [[0,2], [1,2]].
+                   If None, uses default pairs based on num_qubits.
     """
     if gate_idx not in contributed_index:
         raise ValueError(f"gate_idx {gate_idx} not in contributed_index")
@@ -436,9 +464,10 @@ def optimize_gate(gate_idx: int,
     print(f"   Target isometry shape: {tuple(target_isometry.shape)}")
 
     # 3. Count parameters
-    num_params = count_num_params(num_qubits, num_layers)
+    num_params = count_num_params(num_qubits, num_layers, cnot_pairs=cnot_pairs)
     print(f"\n3. Ansatz structure:")
     print(f"   Number of layers: {num_layers}")
+    print(f"   CNOT pairs: {cnot_pairs}")
     print(f"   Number of parameters: {num_params}")
 
     # 4. Initial parameters
@@ -455,6 +484,7 @@ def optimize_gate(gate_idx: int,
             num_qubits=num_qubits,
             num_layers=num_layers,
             ci=ci,
+            cnot_pairs=cnot_pairs,
         )
         fid = 1.0 - loss
         if fid > best_fid:
@@ -477,7 +507,7 @@ def optimize_gate(gate_idx: int,
 
     # 5. Final evaluation
     print("\n5. Final evaluation...")
-    final_matrix, gate_descriptions = build_ansatz_matrix(result.x, num_qubits=num_qubits, num_layers=num_layers)
+    final_matrix, gate_descriptions = build_ansatz_matrix(result.x, num_qubits=num_qubits, num_layers=num_layers, cnot_pairs=cnot_pairs)
     final_iso = get_isometry_matrix(final_matrix, ci)
     final_fid = fidelity_isometry(target_isometry, final_iso)
     loss_val = loss_fn(final_matrix, matrix, ci)
@@ -549,7 +579,8 @@ def cnot_per_gate(num_layers, num_qubits):
         return 2 * num_layers
 
 def optimize_all_gates(max_iter: int = 500,
-                       seed: int = 42) -> Dict[int, Dict[str, Any]]:
+                       seed: int = 42,
+                       cnot_pairs: List[List[int]] = None) -> Dict[int, Dict[str, Any]]:
     """
     Optimize all unitary_gates/tensor{i}.pt for i in contributed_index.keys().
     """
@@ -565,7 +596,7 @@ def optimize_all_gates(max_iter: int = 500,
         print(f"Processing tensor{gi}.pt")
         print(f"{'=' * 70}")
         try:
-            res = optimize_gate(gi, max_iter=max_iter, seed=seed)
+            res = optimize_gate(gi, max_iter=max_iter, seed=seed, cnot_pairs=cnot_pairs[gi])
             all_results[gi] = res
         except Exception as e:
             print(f"Error optimizing tensor{gi}.pt: {e}")
@@ -593,7 +624,29 @@ def optimize_all_gates(max_iter: int = 500,
 
 
 if __name__ == "__main__":
-    optimize_all_gates(max_iter=500, seed=42)
+    # cnot_pairs configuration for each tensor
+    # Note: qubit indices must be valid for each tensor's num_qubits
+    # tensor0: 1 qubit -> no CNOT pairs (empty list)
+    # tensor1: 2 qubits -> can use [0,1]
+    # tensor2: 2 qubits -> can use [0,1]
+    # tensor3: 2 qubits -> can use [0,1] (not [1,2] since only 2 qubits)
+    # tensor4: 3 qubits -> can use [0,1],[1,2] or [0,1],[0,2]
+    # tensor5: 3 qubits -> can use [0,1],[0,2]
+    # tensor6: 2 qubits -> can use [0,1] (not [0,2] since only 2 qubits)
+    # tensor7: 2 qubits -> can use [0,1]
+    # tensor8: 3 qubits -> can use [0,1]
+    cnot_pairs = [
+        [],              # tensor0: 1 qubit
+        [[0,1]],         # tensor1: 2 qubits
+        [[0,1]],         # tensor2: 2 qubits
+        [[0,1]],         # tensor3: 2 qubits
+        [[0,1],[0,2]],   # tensor4: 3 qubits
+        [[0,1],[1,2]],   # tensor5: 3 qubits
+        [[0,1]],         # tensor6: 2 qubits 
+        [[0,1]],         # tensor7: 2 qubits
+        [[0,1],[0,2]]    # tensor8: 3 qubits
+    ]
+    optimize_all_gates(max_iter=500, seed=42, cnot_pairs=cnot_pairs)
 
     total = 0
     for idx in sorted(contributed_index.keys()):
