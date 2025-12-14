@@ -39,6 +39,45 @@ except ImportError:
 
 FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit", "info.txt")
 
+
+MANUAL_MAPPING = {
+    0: 12, 1: 7, 2: 1,
+    3: 19, 4: 13, 5: 8,
+    6: 25, 7: 20, 8: 14
+}
+
+def apply_mapping_to_qcis(logical_qcis: str, mapping: dict) -> str:
+    """
+    直接解析 QCIS 字符串，并将逻辑比特索引替换为物理比特索引。
+    例如：'RY Q1 1.57' -> 'RY Q45 1.57'
+    """
+    mapped_lines = []
+    
+    # 按照空格分割，查找 Q 开头的参数并替换
+    for line in logical_qcis.split('\n'):
+        line = line.strip()
+        if not line: continue
+        
+        parts = line.split()
+        new_parts = []
+        for part in parts:
+            # 匹配 Q0, Q1, Q10 等格式
+            # 注意：不区分大小写，通常 QCIS 是大写 Q
+            if part.upper().startswith('Q') and part[1:].isdigit():
+                logical_idx = int(part[1:])
+                if logical_idx in mapping:
+                    physical_idx = mapping[logical_idx]
+                    new_parts.append(f"Q{physical_idx}")
+                else:
+                    # 如果有未映射的比特，保留原样或报错
+                    new_parts.append(part)
+            else:
+                new_parts.append(part)
+        
+        mapped_lines.append(" ".join(new_parts))
+        
+    return "\n".join(mapped_lines)
+
 # Regex patterns
 _RE_U3 = re.compile(r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)")
 _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
@@ -121,9 +160,9 @@ def get_best_3x3_mapping():
     # 这是一个示例映射，实际需要您查看 platform.download_config() 下来的拓扑图
     # 或者询问技术支持哪个区域最好
     mapping = {
-        0: 12, 1: 13, 2: 14,
-        3: 22, 4: 23, 5: 24,
-        6: 32, 7: 33, 8: 34
+        0: 12, 1: 7, 2: 1,
+        3: 19, 4: 13, 5: 8,
+        6: 25, 7: 20, 8: 14
     }
     return mapping
 
@@ -255,8 +294,8 @@ def main():
 
     # 目标机器：为了测试，先用模拟器 'tianyan_swn' 或 'tianyan_sw'
     # 如果要跑真机，改为 'tianyan-287' 或 'tianyan504'
-    # target_machine = "tianyan_sw" 
-    target_machine = "tianyan176"
+    target_machine = "tianyan-287" 
+    # target_machine = "tianyan176"
     print(f"   [Target] Setting machine to: {target_machine}")
     # platform.set_machine(target_machine)
     try:
@@ -264,24 +303,12 @@ def main():
         platform.set_machine(target_machine)
         # [关键步骤] 下载机器的硬件配置（包含拓扑图）
         print(f"   [Info] Downloading hardware config/topology for {target_machine}...")
-        config = platform.download_config(machine=target_machine)
+        # config = platform.download_config(machine=target_machine)
     except Exception as e:
         print(f"   [Error] Failed to get config for {target_machine}: {e}")
         return
-
-    from cqlib.mapping import transpile_qcis as transpile
-    print("   [Info] Transpiling circuit to match hardware topology...")
-    try:
-        # transpile 会返回一个新的 Circuit 对象，其中的门和比特索引已经适配了硬件
-        # 它会自动插入 SWAP 门来解决不连通的问题
-        compiled_circuit, initial_layout, swap_mapping, mapping_virtual_to_final = transpile(cqlib_circuit.qcis, platform)
-        print("   [Success] Circuit transpiled successfully.")
-        # 可选：打印一下转译后的 QCIS 看看有什么不同
-        # print(f"   [Debug] Compiled QCIS snippet:\n{compiled_circuit.qcis[:100]}...")
-    except Exception as e:
-        print(f"   [Error] Transpilation failed: {e}")
-        print("   Make sure your logical circuit fits on the chip.")
-        return
+    
+    compiled_circuit = apply_mapping_to_qcis(cqlib_circuit.qcis, MANUAL_MAPPING)
 
     # 5. Submit Experiment
     shots = 5000
@@ -290,7 +317,7 @@ def main():
     try:
         # submit_experiment 接受 circuit.qcis 字符串
         query_id = platform.submit_experiment(
-            circuit=compiled_circuit.qcis,
+            circuit=compiled_circuit,
             num_shots=shots
         )
         print(f"   [Query ID] {query_id}")
