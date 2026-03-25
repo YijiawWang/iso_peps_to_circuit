@@ -1,0 +1,22 @@
+gate index: 2
+max_iter: 500
+num_layers: 2
+ci: [1, 0]
+final fidelity: 0.999999999890
+final loss (1 - fidelity): 1.100437518886e-10
+final loss_fn (Frobenius): 4.956801711670e-01
+iterations: 16
+optimization time: 0.79 seconds
+num_qubits: 2
+num_params: 24
+num_ops: 10
+op0: u3(theta=-0.832502, phi=2.936262, lam=1.236941, qubit=0)
+op1: u3(theta=1.570785, phi=-1.809086, lam=-2.161450, qubit=1)
+op2: cz[0,1]
+op3: u3(theta=-3.156441, phi=2.464300, lam=0.739665, qubit=0)
+op4: u3(theta=1.088776, phi=-3.922658, lam=3.304744, qubit=1)
+op5: u3(theta=1.582808, phi=-1.250745, lam=-1.835606, qubit=0)
+op6: u3(theta=-1.504224, phi=-1.471122, lam=-0.754852, qubit=1)
+op7: cz[0,1]
+op8: u3(theta=-1.570807, phi=-1.311746, lam=1.259474, qubit=0)
+op9: u3(theta=-2.366600, phi=-1.519170, lam=-1.080813, qubit=1)

@@ -3,9 +3,9 @@
 EXECUTE isoPEPS on TIANYAN using NATIVE CQLIB (No Adapter).
 
 Mechanism:
-1. Parses info.txt for 'u3' and 'cnot' gates.
+1. Parses info.txt from final_circuit_cz for 'u3' and 'cz' gates.
 2. Manually decomposes 'u3(theta, phi, lam)' -> RZ(lam)-RY(theta)-RZ(phi).
-3. Constructs a native cqlib.Circuit.
+3. Constructs a native cqlib.Circuit with CZ gates.
 4. Submits directly via TianYanPlatform.
 """
 
@@ -37,7 +37,7 @@ try:
 except ImportError:
     pass
 
-FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit", "info.txt")
+FINAL_CIRCUIT_INFO = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit_cz", "info.txt")
 
 
 MANUAL_MAPPING = {
@@ -81,6 +81,7 @@ def apply_mapping_to_qcis(logical_qcis: str, mapping: dict) -> str:
 # Regex patterns
 _RE_U3 = re.compile(r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)")
 _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
+_RE_CZ = re.compile(r"op\d+:\s*cz\[(\d+),(\d+)\]")
 
 def parse_info_file(info_path: str):
     operations = []
@@ -95,6 +96,7 @@ def parse_info_file(info_path: str):
                     'params': (float(m_u3.group(1)), float(m_u3.group(2)), float(m_u3.group(3))), 
                     'qubits': [int(m_u3.group(4))]
                 })
+                continue
             m_cx = _RE_CNOT.match(line)
             if m_cx:
                 operations.append({
@@ -102,6 +104,15 @@ def parse_info_file(info_path: str):
                     'params': (int(m_cx.group(1)), int(m_cx.group(2))), 
                     'qubits': [int(m_cx.group(1)), int(m_cx.group(2))]
                 })
+                continue
+            m_cz = _RE_CZ.match(line)
+            if m_cz:
+                operations.append({
+                    'type': 'cz', 
+                    'params': (int(m_cz.group(1)), int(m_cz.group(2))), 
+                    'qubits': [int(m_cz.group(1)), int(m_cz.group(2))]
+                })
+                continue
     return operations
 
 def build_native_cqlib_circuit(operations, num_qubits=9):
@@ -118,7 +129,9 @@ def build_native_cqlib_circuit(operations, num_qubits=9):
         if op['type'] == 'cnot':
             control, target = op['params']
             circuit.cx(control, target)
-            
+        elif op['type'] == 'cz':
+            q0, q1 = op['params']
+            circuit.cz(q0, q1)
         elif op['type'] == 'u3':
             theta, phi, lam = op['params']
             q = op['qubits'][0]
@@ -297,6 +310,66 @@ def reversed_bitstring_to_tensor(bitstring):
     """Helper: '101' -> torch.tensor([1, 0, 1])"""
     return torch.tensor([int(c) for c in bitstring], dtype=torch.uint8)
 
+def print_circuit_info(operations, circuit=None):
+    """
+    Print detailed circuit information including gate counts and types.
+    
+    Args:
+        operations: List of operation dictionaries from parse_info_file
+        circuit: Optional cqlib.Circuit object for additional info
+    """
+    print("\n" + "=" * 70)
+    print("CIRCUIT INFORMATION")
+    print("=" * 70)
+    
+    # Count gates by type
+    gate_counts = {}
+    for op in operations:
+        gate_type = op['type']
+        gate_counts[gate_type] = gate_counts.get(gate_type, 0) + 1
+    
+    # Print gate statistics
+    print(f"\nTotal operations: {len(operations)}")
+    print("\nGate breakdown:")
+    print("-" * 70)
+    for gate_type, count in sorted(gate_counts.items()):
+        percentage = (count / len(operations)) * 100
+        print(f"  {gate_type.upper():8s}: {count:4d} ({percentage:5.1f}%)")
+    
+    # Print detailed breakdown for U3 gates (after decomposition)
+    if circuit is not None:
+        # Count gates in the actual circuit (after U3 decomposition)
+        qcis_lines = [line.strip() for line in circuit.qcis.split('\n') if line.strip()]
+        rz_count = sum(1 for line in qcis_lines if line.startswith('RZ'))
+        ry_count = sum(1 for line in qcis_lines if line.startswith('RY'))
+        cx_count = sum(1 for line in qcis_lines if line.startswith('CX'))
+        cz_count = sum(1 for line in qcis_lines if line.startswith('CZ'))
+        measure_count = sum(1 for line in qcis_lines if 'MEAS' in line.upper())
+        
+        print("\nAfter U3 decomposition (native gates):")
+        print("-" * 70)
+        if rz_count > 0:
+            print(f"  RZ:      {rz_count:4d}")
+        if ry_count > 0:
+            print(f"  RY:      {ry_count:4d}")
+        if cx_count > 0:
+            print(f"  CX:      {cx_count:4d}")
+        if cz_count > 0:
+            print(f"  CZ:      {cz_count:4d}")
+        if measure_count > 0:
+            print(f"  MEASURE: {measure_count:4d}")
+        
+        total_native = rz_count + ry_count + cx_count + cz_count + measure_count
+        print(f"\n  Total native gates: {total_native}")
+    
+    # Print qubit usage
+    qubits_used = set()
+    for op in operations:
+        qubits_used.update(op['qubits'])
+    print(f"\nQubits used: {sorted(qubits_used)} (total: {len(qubits_used)} qubits)")
+    
+    print("=" * 70 + "\n")
+
 def main():
     print("=" * 70)
     print(f"EXECUTION ON TIANYAN (Native Cqlib)")
@@ -310,6 +383,9 @@ def main():
     # 2. Build Native Circuit
     print("   [Info] Building cqlib circuit (Decomposing U3 -> RZ, RY)...")
     cqlib_circuit = build_native_cqlib_circuit(operations)
+    
+    # Print circuit information
+    print_circuit_info(operations, cqlib_circuit)
     
     # Optional: Print QCIS to verify it looks clean
     print(f"   [INFO] QCIS Script (before transpile):\n{cqlib_circuit.qcis[:200]}...") 
