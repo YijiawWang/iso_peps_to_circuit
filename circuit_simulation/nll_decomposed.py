@@ -23,14 +23,14 @@ gate_order = [8, 5, 2, 1, 4, 7, 6, 3, 0]
 
 def load_decomposed_gates():
     """
-    Load all decomposed gate matrices from ../gates/decomposed_gates.
+    Load all decomposed gate matrices from ../gates/decomposed_gates_cz.
 
     Returns:
         list: List of gate matrices in gate_order sequence
     """
     gates = []
     for i in gate_order:
-        gate_path = f"../gates_2patterns/decomposed_gates/gate_index{i}/gate_matrix.pt"
+        gate_path = f"../gates/decomposed_gates_cz/gate_index{i}/gate_matrix.pt"
         gate = torch.load(gate_path).detach()
         print(f"{i} ", end="")
         gates.append(gate)
@@ -247,11 +247,14 @@ def plot_image_grid(image_list: np.array,
     plt.show()
 
 # Same STANDARD_INDICES as in nll_unitary.py
+# STANDARD_INDICES = [
+#     [0, 0, 1, 0, 0, 1, 1, 0, 0],
+#     [1, 0, 0, 0, 0, 1, 0, 1, 0]
+# ]
 STANDARD_INDICES = [
-    # [1, 1, 0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0, 1, 1],
     [0, 0, 1, 0, 0, 1, 1, 0, 0],
-    # [0, 0, 0, 0, 1, 0, 0, 1, 1]
-    [1, 0, 0, 0, 0, 1, 0, 1, 0],
+    [1, 1, 0, 1, 0, 0, 0, 0, 0]
 ]
 
 QUBITS_MAPPING = {
@@ -284,7 +287,7 @@ if __name__ == "__main__":
     # Optional sampling / plotting:
     samples = sample_from_probability(probs, num_shots=100)
     print(f"Generated {len(samples)} samples from distribution")
-    filename = "../samples/samples_decomposed_approx.png"
+    filename = "../samples/samples_decomposed_approx_3_patterns_cz.png"
     plot_image_grid(
     samples,
     rows = 10,

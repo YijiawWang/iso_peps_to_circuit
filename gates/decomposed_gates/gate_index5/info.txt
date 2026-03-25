@@ -1,31 +1,45 @@
 gate index: 5
 max_iter: 500
-num_layers: 2
+num_layers: 3
 ci: [0, 0, 1]
-final fidelity: 0.999999999900
-final loss (1 - fidelity): 9.958456281822e-11
-final loss_fn (Frobenius): 1.390998200178e+00
-iterations: 25
-optimization time: 4.50 seconds
+final fidelity: 0.999999995303
+final loss (1 - fidelity): 4.696586008990e-09
+final loss_fn (Frobenius): 3.537743597628e+00
+iterations: 42
+optimization time: 29.55 seconds
 num_qubits: 3
-num_params: 45
-num_ops: 19
-op0: u3(theta=-0.748751, phi=3.067765, lam=1.457661, qubit=0)
-op1: u3(theta=0.855519, phi=-2.243781, lam=-2.161450, qubit=1)
-op2: u3(theta=-2.369413, phi=2.171948, lam=0.757363, qubit=2)
+num_params: 81
+num_ops: 33
+op0: u3(theta=-0.664754, phi=2.988922, lam=1.457661, qubit=0)
+op1: u3(theta=0.539378, phi=-2.030876, lam=-2.161450, qubit=1)
+op2: u3(theta=-2.877051, phi=2.747500, lam=0.233028, qubit=2)
 op3: cnot[0,1]
-op4: u3(theta=0.906259, phi=-3.171574, lam=3.188375, qubit=0)
-op5: u3(theta=2.232838, phi=-1.621600, lam=-1.688013, qubit=1)
-op6: u3(theta=-2.188203, phi=-1.539016, lam=0.026744, qubit=2)
+op4: u3(theta=1.133265, phi=-3.026570, lam=3.109529, qubit=0)
+op5: u3(theta=2.022888, phi=-1.948043, lam=-1.706557, qubit=1)
+op6: u3(theta=-1.913718, phi=-1.346298, lam=0.602297, qubit=2)
 op7: cnot[1,2]
-op8: u3(theta=-0.286218, phi=-1.603799, lam=0.543475, qubit=0)
-op9: u3(theta=-1.727259, phi=-1.570795, lam=-0.653847, qubit=1)
-op10: u3(theta=-0.471937, phi=2.248266, lam=-1.942195, qubit=2)
-op11: cnot[0,1]
-op12: u3(theta=-0.176080, phi=0.274097, lam=-3.141789, qubit=0)
-op13: u3(theta=0.935626, phi=-1.925973, lam=-3.258128, qubit=1)
-op14: u3(theta=1.562266, phi=2.722400, lam=2.394171, qubit=2)
-op15: cnot[1,2]
-op16: u3(theta=-1.494250, phi=-2.354113, lam=0.851010, qubit=0)
-op17: u3(theta=-0.649363, phi=-3.141586, lam=0.113880, qubit=1)
-op18: u3(theta=-2.141948, phi=2.771902, lam=-1.028289, qubit=2)
+op8: u3(theta=-0.405616, phi=-1.423332, lam=0.688477, qubit=0)
+op9: u3(theta=-2.751784, phi=-1.284180, lam=-0.980290, qubit=1)
+op10: u3(theta=-0.055936, phi=1.465943, lam=-2.117043, qubit=2)
+op11: u3(theta=-0.045734, phi=0.465510, lam=-2.961321, qubit=0)
+op12: u3(theta=1.247749, phi=-1.915423, lam=-2.711048, qubit=1)
+op13: u3(theta=2.815500, phi=3.086064, lam=1.611849, qubit=2)
+op14: cnot[0,1]
+op15: u3(theta=-1.305067, phi=-2.579512, lam=1.042422, qubit=0)
+op16: u3(theta=-1.036586, phi=-2.353057, lam=-0.379166, qubit=1)
+op17: u3(theta=-3.468805, phi=2.388133, lam=-1.355223, qubit=2)
+op18: cnot[1,2]
+op19: u3(theta=1.047631, phi=-1.162806, lam=0.074481, qubit=0)
+op20: u3(theta=0.743178, phi=-1.849918, lam=2.972235, qubit=1)
+op21: u3(theta=1.882835, phi=2.987703, lam=2.557226, qubit=2)
+op22: u3(theta=0.590422, phi=2.688936, lam=-2.565331, qubit=0)
+op23: u3(theta=-2.378330, phi=-2.933336, lam=-0.967284, qubit=1)
+op24: u3(theta=-0.782165, phi=-1.141529, lam=2.291767, qubit=2)
+op25: cnot[0,1]
+op26: u3(theta=-1.258365, phi=-1.324311, lam=0.306490, qubit=0)
+op27: u3(theta=-2.170943, phi=2.007527, lam=-2.820540, qubit=1)
+op28: u3(theta=3.136388, phi=1.420441, lam=-1.597898, qubit=2)
+op29: cnot[1,2]
+op30: u3(theta=-3.454129, phi=1.874464, lam=1.351842, qubit=0)
+op31: u3(theta=1.613903, phi=1.722963, lam=-2.567591, qubit=1)
+op32: u3(theta=-1.101946, phi=-2.297477, lam=2.671295, qubit=2)

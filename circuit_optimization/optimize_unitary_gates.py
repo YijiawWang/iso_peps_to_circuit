@@ -442,7 +442,7 @@ def optimize_gate(gate_idx: int,
     gate_path = os.path.join(
         os.path.dirname(__file__),
         "..",
-        "gates_2patterns",
+        "gates",
         "unitary_gates",
         f"tensor{gate_idx}.pt",
     )
@@ -528,7 +528,7 @@ def optimize_gate(gate_idx: int,
 
     # 7. Save results
     print("\n7. Saving results...")
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "gates_2patterns", "decomposed_gates"))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "gates", "decomposed_gates"))
     save_dir = os.path.join(base_dir, f"gate_index{gate_idx}")
     os.makedirs(save_dir, exist_ok=True)
 

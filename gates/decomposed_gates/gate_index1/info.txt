@@ -6,7 +6,7 @@ final fidelity: 0.999999998751
 final loss (1 - fidelity): 1.249080838761e-09
 final loss_fn (Frobenius): 1.943550364667e-01
 iterations: 30
-optimization time: 0.38 seconds
+optimization time: 0.86 seconds
 num_qubits: 2
 num_params: 12
 num_ops: 5

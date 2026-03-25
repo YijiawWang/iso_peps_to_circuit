@@ -10,7 +10,8 @@ from typing import List, Tuple
 from qiskit import QuantumCircuit
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DECOMP_BASE = os.path.join(BASE_DIR, "gates_2patterns", "decomposed_gates")
+DECOMP_BASE = os.path.join(BASE_DIR, "gates", "decomposed_gates")
+DECOMP_BASE_CZ = os.path.join(BASE_DIR, "gates", "decomposed_gates_cz")
 
 # Qubit pattern for each gate (same as in nll_circuit.py)
 ag = [
@@ -32,6 +33,7 @@ _RE_U3 = re.compile(
     r"op\d+:\s*u3\(theta=([\-0-9.eE]+),\s*phi=([\-0-9.eE]+),\s*lam=([\-0-9.eE]+),\s*qubit=(\d+)\)"
 )
 _RE_CNOT = re.compile(r"op\d+:\s*cnot\[(\d+),(\d+)\]")
+_RE_CZ = re.compile(r"op\d+:\s*cz\[(\d+),(\d+)\]")
 
 
 def parse_info_file(info_path: str) -> Tuple[int, int, List[str]]:
@@ -60,15 +62,22 @@ def parse_info_file(info_path: str) -> Tuple[int, int, List[str]]:
     return num_qubits, num_ops, op_lines
 
 
-def build_global_decomposed_circuit() -> QuantumCircuit:
+def build_global_decomposed_circuit(decomp_base: str = None) -> QuantumCircuit:
     """
     Build a 9‑qubit QuantumCircuit corresponding to the full NLL circuit
     using the decomposed gate descriptions in info.txt.
+
+    Args:
+        decomp_base: Path to the decomposed_gates directory.
+                     If None, defaults to DECOMP_BASE (CNOT version).
     """
+    if decomp_base is None:
+        decomp_base = DECOMP_BASE
+
     qc = QuantumCircuit(9)
 
     for gate_idx in gate_order:
-        info_path = os.path.join(DECOMP_BASE, f"gate_index{gate_idx}", "info.txt")
+        info_path = os.path.join(decomp_base, f"gate_index{gate_idx}", "info.txt")
         if not os.path.exists(info_path):
             raise FileNotFoundError(f"Missing info.txt for gate_index{gate_idx}")
 
@@ -98,11 +107,18 @@ def build_global_decomposed_circuit() -> QuantumCircuit:
                 t_local = int(m_cx.group(2))
                 c_global = local_to_global[c_local]
                 t_global = local_to_global[t_local]
-                # PyTorch's CNOT(control, target) corresponds to Qiskit's cx(control, target)
                 qc.cx(c_global, t_global)
                 continue
 
-            # Ignore non-operation lines (like "optimization time: ...")
+            m_cz = _RE_CZ.match(line)
+            if m_cz:
+                q0_local = int(m_cz.group(1))
+                q1_local = int(m_cz.group(2))
+                q0_global = local_to_global[q0_local]
+                q1_global = local_to_global[q1_local]
+                qc.cz(q0_global, q1_global)
+                continue
+
             if not line.startswith("op"):
                 continue
 
@@ -110,7 +126,13 @@ def build_global_decomposed_circuit() -> QuantumCircuit:
 
 
 if __name__ == "__main__":
-    qc = build_global_decomposed_circuit()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "cz":
+        print("Building from decomposed_gates_cz ...")
+        qc = build_global_decomposed_circuit(DECOMP_BASE_CZ)
+    else:
+        print("Building from decomposed_gates ...")
+        qc = build_global_decomposed_circuit()
     print(f"Circuit depth: {qc.depth()}")
     print(f"Total operations: {qc.size()}")
     print(f"Operation counts: {qc.count_ops()}")

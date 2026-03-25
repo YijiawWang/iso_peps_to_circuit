@@ -21,7 +21,7 @@ SRC_DIR = os.path.join(BASE_DIR, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from build_circuit_from_info import build_global_decomposed_circuit
+from build_circuit_from_info import build_global_decomposed_circuit, DECOMP_BASE, DECOMP_BASE_CZ
 
 # Euler decomposer for extracting U3 parameters from a matrix
 euler_decomposer = OneQubitEulerDecomposer(basis='U3')
@@ -208,6 +208,12 @@ def save_circuit_to_folder(qc: QuantumCircuit, output_dir: str):
                 target = qc.qubits.index(inst.qubits[1])
                 f.write(f"op{op_idx}: cnot[{control},{target}]\n")
                 op_idx += 1
+            elif inst.operation.name == 'cz':
+                # CZ gate
+                q0 = qc.qubits.index(inst.qubits[0])
+                q1 = qc.qubits.index(inst.qubits[1])
+                f.write(f"op{op_idx}: cz[{q0},{q1}]\n")
+                op_idx += 1
             else:
                 # Other gates
                 qubits = [qc.qubits.index(q) for q in inst.qubits]
@@ -216,9 +222,17 @@ def save_circuit_to_folder(qc: QuantumCircuit, output_dir: str):
     print(f"Saved gate information to: {gate_info_path}")
 
 
-def main():
-    print("Building original decomposed circuit...")
-    qc_original = build_global_decomposed_circuit()
+def main(use_cz: bool = False):
+    if use_cz:
+        decomp_base = DECOMP_BASE_CZ
+        output_dir = os.path.join(BASE_DIR, "gates", "final_circuit_cz")
+        print("Building original decomposed circuit (CZ version)...")
+    else:
+        decomp_base = DECOMP_BASE
+        output_dir = os.path.join(BASE_DIR, "gates", "final_circuit")
+        print("Building original decomposed circuit...")
+
+    qc_original = build_global_decomposed_circuit(decomp_base)
     
     print(f"\nOriginal circuit:")
     print(f"  Depth: {qc_original.depth()}")
@@ -246,8 +260,6 @@ def main():
     else:
         print("✓ Optimized circuit matches original circuit (fidelity = 1.0)")
     
-    # Save to gates/final_circuit
-    output_dir = os.path.join(BASE_DIR, "gates_2patterns", "final_circuit")
     print(f"\nSaving optimized circuit to: {output_dir}")
     save_circuit_to_folder(qc_optimized, output_dir)
     
@@ -255,5 +267,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    use_cz = len(sys.argv) > 1 and sys.argv[1] == "cz"
+    main(use_cz=use_cz)
 

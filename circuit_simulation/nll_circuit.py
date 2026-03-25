@@ -29,7 +29,7 @@ if TEST_DIR not in sys.path:
 import nll_decomposed
 from optimize_unitary_gates import u3_matrix, cnot_matrix
 
-DECOMP_BASE = os.path.join(BASE_DIR, "gates_2patterns", "decomposed_gates")
+DECOMP_BASE = os.path.join(BASE_DIR, "gates", "decomposed_gates")
 
 # Qubit pattern for each gate (same as in nll_unitary.py)
 ag = [
@@ -245,7 +245,7 @@ def main():
         cols=10,
         title="Samples from info.txt-based circuit (pure PyTorch implementation)",
         figsize=(5, 5),
-        filename="../samples/samples_decomposed_circuit.png"
+        filename="../samples/samples_decomposed_circuit_3_patterns_cz.png"
     )
 
 
